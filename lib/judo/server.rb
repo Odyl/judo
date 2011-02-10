@@ -280,8 +280,9 @@ module Judo
       remove "elastic_ip"
     end
 
-    def destroy
-      stop if running?
+    def destroy(options = {})
+      force = options[:force]
+      stop(options) if running?
 
       task("Terminating instance") { @base.ec2.terminate_instances([ instance_id ]) }
       force_detach_volumes if force
@@ -362,7 +363,6 @@ module Judo
     def stop(options = {})
       force = options[:force]
       invalid "not running" unless running?
-      ## EC2 terminate_instaces
       task("Stop instance") { @base.ec2.stop_instances([ instance_id ]) }
       update "stopped_at" => Time.now.to_i
       #task("Terminating instance") { @base.ec2.terminate_instances([ instance_id ]) }
