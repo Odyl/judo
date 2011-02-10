@@ -202,7 +202,7 @@ module Judo
     def clone_snapshots(snapshots)
       snapshots.each do |device,snap_id|
         task("Creating EC2 Volume #{device} from #{snap_id}") do
-          volume_id = @base.ec2.create_volume(snap_id, nil, config["availability_zone"])[:aws_id]
+          volume_id = @base.ec2.create_volume(snap_id, nil, ec2_availability_zone)[:aws_id]
           add_volume(volume_id, device)
         end
       end
@@ -216,7 +216,7 @@ module Judo
             size = volume_config["size"]
             if not volumes[device]
               task("Creating EC2 Volume #{device} #{size}") do
-                volume_id = @base.ec2.create_volume(nil, size, config["availability_zone"])[:aws_id]
+                volume_id = @base.ec2.create_volume(nil, size, ec2_availability_zone)[:aws_id]
                 add_volume(volume_id, device)
               end
             else
@@ -295,6 +295,10 @@ module Judo
       ec2_instance[:aws_state]
     end
 
+    def ec2_availability_zone
+      ec2_instance[:aws_availability_zone] or config["availability_zone"] or "us-east-1b"
+    end
+
     def running?
       ## other options are "terminated" and "nil"
       ["pending", "running", "shutting_down", "degraded"].include?(ec2_state)
@@ -343,7 +347,7 @@ module Judo
     def stop(options = {})
       force = options[:force]
       invalid "not running" unless running?
-      ## EC2 terminate_isntaces
+      ## EC2 terminate_instaces
       task("Terminating instance") { @base.ec2.terminate_instances([ instance_id ]) }
       force_detach_volumes if force
       wait_for_volumes_detached if volumes.size > 0
