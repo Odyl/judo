@@ -1,5 +1,6 @@
 module Aws
   class Ec2
+
     def describe_snapshots(list=[], opts={})
       params = {}
       params.merge!(hash_params('SnapshotId',list.to_a))
@@ -9,5 +10,16 @@ module Aws
     rescue Exception
       on_exception
     end
+
+    def stop_instances(list=[])
+      link = generate_request("StopInstances", hash_params('InstanceId', list.to_a))
+      request_info(link, QEc2TerminateInstancesParser.new(:logger => @logger))
+    end
+
+    def start_instances(list=[])
+      link = generate_request("StartInstances", hash_params('InstanceId', list.to_a))
+      request_info(link, QEc2TerminateInstancesParser.new(:logger => @logger))
+    end
+
   end
 end

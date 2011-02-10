@@ -282,6 +282,12 @@ module Judo
 
     def destroy
       stop if running?
+
+      task("Terminating instance") { @base.ec2.terminate_instances([ instance_id ]) }
+      force_detach_volumes if force
+      wait_for_volumes_detached if volumes.size > 0
+      remove "instance_id"
+
       task("Deleting Elastic Ip") { remove_ip } if has_ip?
       volumes.each { |dev,v| remove_volume(v,dev) }
       task("Destroying server #{name}") { delete }
@@ -304,19 +310,28 @@ module Judo
       ["pending", "running", "shutting_down", "degraded"].include?(ec2_state)
     end
 
+    def stopped?
+      ["stopped"].include?(ec2_state)
+    end
+
     def start(options = {})
-      @boot = options[:boot]
-      new_version = options[:version]
-      set_instance_type(options[:instance_type]) if options[:instance_type]
+      if stopped? then
+        task("Starting server #{name}") { start_ec2(instance_id) }
+        task("Wait for server")              { wait_for_running } if elastic_ip or has_volumes?
+      else
+        @boot = options[:boot]
+        new_version = options[:version]
+        set_instance_type(options[:instance_type]) if options[:instance_type]
 
-      invalid "Already running" if running?
-      invalid "No config has been commited yet, type 'judo commit'" unless group.version > 0
+        invalid "Already running" if running?
+        invalid "No config has been commited yet, type 'judo commit'" unless group.version > 0
 
-      task("Updating server version")      { update_version(options[:version]) } if options[:version]
-      task("Starting server #{name}")      { launch_ec2 }
-      task("Wait for server")              { wait_for_running } if elastic_ip or has_volumes?
+        task("Updating server version")      { update_version(options[:version]) } if options[:version]
+        task("Starting server #{name}")      { launch_ec2 }
+        task("Wait for server")              { wait_for_running } if elastic_ip or has_volumes?
+        task("Attaching volumes")            { attach_volumes } if has_volumes?
+      end
       task("Attaching ip")                 { attach_ip } if elastic_ip
-      task("Attaching volumes")            { attach_volumes } if has_volumes?
     end
 
     def restart(options = {})
@@ -348,11 +363,13 @@ module Judo
       force = options[:force]
       invalid "not running" unless running?
       ## EC2 terminate_instaces
-      task("Terminating instance") { @base.ec2.terminate_instances([ instance_id ]) }
-      force_detach_volumes if force
-      wait_for_volumes_detached if volumes.size > 0
-      remove "instance_id"
+      task("Stop instance") { @base.ec2.stop_instances([ instance_id ]) }
       update "stopped_at" => Time.now.to_i
+      #task("Terminating instance") { @base.ec2.terminate_instances([ instance_id ]) }
+      #force_detach_volumes if force
+      #wait_for_volumes_detached if volumes.size > 0
+      #remove "instance_id"
+      #update "stopped_at" => Time.now.to_i
     end
 
     def launch_ec2
@@ -365,6 +382,12 @@ module Judo
         :group_ids => security_groups,
         :user_data => ud).first
       update "instance_id" => result[:aws_instance_id], "virgin" => false, "started_at" => Time.now.to_i
+    end
+
+    def start_ec2(instanceid)
+      ud = user_data
+      debug(ud)
+      result = @base.ec2.start_instances([ instanceid ])
     end
 
     def debug(str)
