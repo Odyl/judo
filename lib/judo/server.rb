@@ -9,7 +9,7 @@ module Judo
     end
 
     def create(name, options)
-      raise JudoError, "group '#{group_name}' does not exists" unless group
+      raise JudoError, "group '#{group_name}' does not exist" unless group
       raise JudoError, "there is already a server named #{name}" if @base.servers.detect { |s| s.name == name and s != self}
       raise JudoError, "there is already a server with id #{id}" if @base.servers.detect { |s| s.id == id and s != self}
 
@@ -18,7 +18,7 @@ module Judo
       metadata      = options[:metadata]
       ip            = options[:elastic_ip]
       clone         = options[:clone]
-      instance_type = options[:instance_type] || 'm1.small'
+      instance_type = options[:instance_type] || group.config(group.version)['default_instance_type'] || 'm1.small'
       version       = options[:version] || group.version
 
       task("Creating server #{name}") do
@@ -365,11 +365,6 @@ module Judo
       invalid "not running" unless running?
       task("Stop instance") { @base.ec2.stop_instances([ instance_id ]) }
       update "stopped_at" => Time.now.to_i
-      #task("Terminating instance") { @base.ec2.terminate_instances([ instance_id ]) }
-      #force_detach_volumes if force
-      #wait_for_volumes_detached if volumes.size > 0
-      #remove "instance_id"
-      #update "stopped_at" => Time.now.to_i
     end
 
     def launch_ec2
@@ -381,6 +376,14 @@ module Judo
         :key_name => "judo",
         :group_ids => security_groups,
         :user_data => ud).first
+      sleep 1 # TODO this is a hack OPPS
+      {
+        'Class' => group,
+        'Name' => name,
+        'Task' => 'judo'
+      }.each do |key, val|
+          @base.ec2.create_tag(result[:aws_instance_id], key, val)
+      end
       update "instance_id" => result[:aws_instance_id], "virgin" => false, "started_at" => Time.now.to_i
     end
 
