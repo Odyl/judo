@@ -237,7 +237,7 @@ module Judo
             add_ip(ip)
           end
         end
-      rescue Aws::AwsError => e
+      rescue RightAws::AwsError => e
         if e.message =~ /AddressLimitExceeded/
           invalid "Failed to allocate ip address: Limit Exceeded"
         else

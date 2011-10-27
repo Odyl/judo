@@ -25,13 +25,13 @@ module Judo
 
     def load_userdata(version)
         @base.s3_get(version_userdata_file(version))
-      rescue Aws::AwsError
+      rescue RightAws::AwsError
        raise JudoError, "No userdata stored: try 'judo commit #{to_s}'"
     end
 
     def load_config(version)
         JSON.load @base.s3_get(version_config_file(version))
-      rescue Aws::AwsError
+      rescue RightAws::AwsError
        raise JudoError, "No config stored: try 'judo commit #{to_s}'"
     end
 

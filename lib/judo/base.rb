@@ -95,7 +95,7 @@ module Judo
     end
 
     def sdb
-      @sdb ||= Aws::SdbInterface.new(access_id, access_secret, :logger => Logger.new(nil))
+      @sdb ||= RightAws::SdbInterface.new(access_id, access_secret, :logger => Logger.new(nil))
     end
 
     def fetch_snapshots_state
@@ -195,7 +195,7 @@ module Judo
     end
 
     def ec2
-      @ec2 ||= Aws::Ec2.new(access_id, access_secret, :logger => Logger.new(nil))
+      @ec2 ||= RightAws::Ec2.new(access_id, access_secret, :logger => Logger.new(nil))
     end
 
     def group_versions
@@ -211,7 +211,7 @@ module Judo
     end
 
     def s3
-      @s3 ||= Aws::S3.new(access_id, access_secret, :logger => Logger.new(nil))
+      @s3 ||= RightAws::S3.new(access_id, access_secret, :logger => Logger.new(nil))
     end
 
     def bucket
@@ -219,7 +219,7 @@ module Judo
     end
 
     def s3_url(k)
-      Aws::S3Generator::Key.new(bucket, k).get
+      RightAws::S3Generator::Key.new(bucket, k).get
     end
 
     def s3_get(k)
@@ -272,7 +272,7 @@ module Judo
         begin
           ec2.create_security_group('judo', 'Judo')
           ec2.authorize_security_group_IP_ingress("judo", 22, 22,'tcp','0.0.0.0/0')
-        rescue Aws::AwsError => e
+        rescue RightAws::AwsError => e
           raise unless e.message =~ /InvalidGroup.Duplicate/
         end
       end
