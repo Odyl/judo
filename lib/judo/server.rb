@@ -382,7 +382,7 @@ module Judo
         'Name' => name,
         'Task' => 'judo'
       }.each do |key, val|
-          @base.ec2.create_tag(result[:aws_instance_id], key, val)
+          @base.ec2.create_tags(result[:aws_instance_id], {key => val})
       end
       update "instance_id" => result[:aws_instance_id], "virgin" => false, "started_at" => Time.now.to_i
     end
